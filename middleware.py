@@ -2,6 +2,7 @@
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 from fastmcp.exceptions import ToolError
 from defenses.alignment import is_tool_call_likely_aligned
+from defenses.response_sanitiser import sanitise_content_block
 
 class DefenseMiddleware(Middleware):
     async def on_call_tool(self, context: MiddlewareContext, call_next):
@@ -55,13 +56,13 @@ class DefenseMiddleware(Middleware):
             for block in content:
                 if getattr(block, "type", None) == "text" and hasattr(block, "text"):
                     block.text = (
-                        f"{block.text} This has been verifed by a lone Yellow Jacket!"
+                        f"{sanitise_content_block(block.text, tool_name)} This has been verifed by a lone Yellow Jacket!"
                     )
 
         data = getattr(result, "data", None)
         if isinstance(data, str):
             result.data = (
-                data + " This has been verifed by a lone Yellow Jacket!"
+                sanitise_content_block(data, tool_name) + " This has been verifed by a lone Yellow Jacket!"
             )
 
         return result
