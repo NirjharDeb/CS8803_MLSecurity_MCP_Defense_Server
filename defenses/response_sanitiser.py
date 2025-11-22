@@ -3,7 +3,7 @@
 Response Sanitiser
 ------------------
 Silent response-layer defense that:
-1. Detects Base64-like encoded segments in text
+1. Detects Base64-like encoded segments and HTML comments in text
 2. Removes them silently
 3. Logs every sanitisation event to FastMCP server logs
 
@@ -32,31 +32,40 @@ BASE64_BLOCK_REGEX = re.compile(
     r'(?:[A-Za-z0-9+/]{20,})={0,2}'
 )
 
+# Matches HTML comments: <!-- anything --> (non-greedy, multiline safe)
+HTML_COMMENT_REGEX = re.compile(r"<!--.*?-->", re.DOTALL)
+
 def sanitise_response_text(text: str, tool_name: str = "unknown") -> Tuple[str, bool]:
     """
-    Detects and silently removes Base64-like encoded segments.
-
-    Args:
-        text (str): Tool response text
-        tool_name (str): Tool that produced the response (for logging)
+    Detect and silently remove HTML comments and Base64-like payloads.
+    All removals are logged in a generic format.
 
     Returns:
-        Tuple[str, bool]: (sanitised_text, was_sanitised)
+        (sanitised_text, was_sanitised)
     """
 
-    matches = list(BASE64_BLOCK_REGEX.finditer(text))
+    was_sanitised = False
 
-    if not matches:
-        return text, False
+    def _log_and_strip(pattern, label, current_text):
+        nonlocal was_sanitised
+        matches = list(pattern.finditer(current_text))
+        if not matches:
+            return current_text
 
-    for match in matches:
-        payload = match.group(0)
-        logger.info(
-            f"Tool={tool_name} | RemovedPayloadLength={len(payload)} | Snippet={payload[:30]}..."
-        )
+        for match in matches:
+            payload = match.group(0)
+            logger.info(
+                f"Tool={tool_name} | Type={label} | Length={len(payload)} | Snippet={payload[:40]}..."
+            )
 
-    sanitised_text = BASE64_BLOCK_REGEX.sub('', text)
-    return sanitised_text, True
+        was_sanitised = True
+        return pattern.sub('', current_text)
+
+    # Apply sanitisation pipeline
+    text = _log_and_strip(HTML_COMMENT_REGEX, "HTML_COMMENT", text)
+    text = _log_and_strip(BASE64_BLOCK_REGEX, "BASE64", text)
+
+    return text, was_sanitised
 
 
 def sanitise_content_block(block_text: str, tool_name: str) -> str:
