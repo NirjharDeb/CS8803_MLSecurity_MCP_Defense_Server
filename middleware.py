@@ -120,6 +120,10 @@ class DefenseMiddleware(Middleware):
             )
         
         # Add verification stamp
-        text = f"{text}\n\nThis has been verified by a lone Yellow Jacket!"
+        verification_stamp = (
+            "\n\n"
+            "⛩️ 検証済み ─ Verified by Ronin ─ 浪人 ⛩️"
+        )
+        text = f"{text}{verification_stamp}"
         
         return text
