@@ -45,10 +45,13 @@ def _extract_candidate_text(arguments: Dict[str, Any]) -> Optional[str]:
     - Keep ones that are reasonably long and contain spaces.
     - Return the longest one (often the main "content"/"prompt"/"query").
     """
+    # Skip argument names that typically contain data payloads, not user intent
+    skip_keys = {"body", "content", "data", "payload", "html", "text"}
+    
     candidates: list[str] = []
 
-    for value in arguments.values():
-        if isinstance(value, str):
+    for key, value in arguments.items():
+        if isinstance(value, str) and key.lower() not in skip_keys:
             text = value.strip()
             # Heuristics: longish and multi-word looks more like natural language
             if len(text) >= 20 and " " in text:
