@@ -70,8 +70,9 @@ class DependencyTracker:
                 return True, f"Rapid burst of {len(recent_calls)} tool calls after read operation"
         
         # Check for unusual escalation: read → write → write pattern
-        if len(self.call_history) >= 2:
-            last_two = self.call_history[-2:]
+        # Only consider recent calls within the burst window
+        if len(recent_calls) >= 2:
+            last_two = recent_calls[-2:]
             if (last_two[0].is_read_operation and 
                 not last_two[1].is_read_operation and
                 not self._is_read_operation(next_tool_name)):
