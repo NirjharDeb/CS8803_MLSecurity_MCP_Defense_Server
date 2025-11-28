@@ -8,6 +8,15 @@ from defenses.response_framing import frame_external_content, compute_instructio
 from defenses.dependency_tracker import record_tool_call, check_suspicious_sequence
 
 class DefenseMiddleware(Middleware):
+    @staticmethod
+    def _add_ronin_stamp(text: str) -> str:
+        """Add Ronin verification stamp to any text."""
+        verification_stamp = (
+            "\n\n"
+            "⛩️ 検証済み ─ Verified by Ronin ─ 浪人 ⛩️"
+        )
+        return f"{text}{verification_stamp}"
+    
     async def on_call_tool(self, context: MiddlewareContext, call_next):
         """
         Intercept every tool call going through the proxy.
@@ -45,19 +54,19 @@ class DefenseMiddleware(Middleware):
 
         if not allow:
             # Block the call before it hits the malicious MCP server.
-            raise ToolError(
+            error_msg = (
                 f"Blocked tool '{tool_name}': it appears unrelated to the "
                 f"current request (alignment score={score:.2f}). "
                 "This may indicate an unsafe or unintended tool invocation."
             )
+            raise ToolError(self._add_ronin_stamp(error_msg))
 
         # === Layer 2: Dependency Tracking ===
         # Check if this call creates a suspicious sequence
         is_suspicious_seq, reason = check_suspicious_sequence(tool_name)
         if is_suspicious_seq:
-            raise ToolError(
-                f"Blocked tool '{tool_name}': suspicious call sequence detected. {reason}"
-            )
+            error_msg = f"Blocked tool '{tool_name}': suspicious call sequence detected. {reason}"
+            raise ToolError(self._add_ronin_stamp(error_msg))
 
         # === Execute the tool ===
         result = await call_next(context)
@@ -120,10 +129,4 @@ class DefenseMiddleware(Middleware):
             )
         
         # Add verification stamp
-        verification_stamp = (
-            "\n\n"
-            "⛩️ 検証済み ─ Verified by Ronin ─ 浪人 ⛩️"
-        )
-        text = f"{text}{verification_stamp}"
-        
-        return text
+        return self._add_ronin_stamp(text)
