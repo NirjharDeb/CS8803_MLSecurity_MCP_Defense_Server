@@ -1,4 +1,5 @@
-# defenses/dependency_tracker.py
+"""Track tool call sequences to detect anomalous patterns."""
+
 from dataclasses import dataclass
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -8,16 +9,12 @@ class ToolCallRecord:
     """Record of a tool call for dependency tracking."""
     tool_name: str
     timestamp: datetime
-    is_read_operation: bool  # True for data-retrieval tools
+    is_read_operation: bool
 
 
 class DependencyTracker:
-    """
-    Tracks tool call sequences to detect anomalous patterns that might
-    indicate prompt injection via tool responses.
-    """
+    """Tracks tool call sequences to detect anomalous patterns."""
     
-    # Tool name patterns that indicate read/retrieval operations
     _READ_TOOL_KEYWORDS = [
         'get', 'read', 'fetch', 'retrieve', 'list', 'show', 'view',
         'download', 'load', 'query', 'search', 'find'
@@ -29,7 +26,7 @@ class DependencyTracker:
         self.call_history: List[ToolCallRecord] = []
     
     def record_tool_call(self, tool_name: str) -> None:
-        """Record a tool call in the history."""
+        """Record a tool call in history."""
         is_read = self._is_read_operation(tool_name)
         record = ToolCallRecord(
             tool_name=tool_name,
@@ -39,17 +36,18 @@ class DependencyTracker:
         
         self.call_history.append(record)
         
-        # Keep only recent history
         if len(self.call_history) > self.max_history:
             self.call_history.pop(0)
     
     def check_suspicious_sequence(self, next_tool_name: str) -> tuple[bool, Optional[str]]:
         """
-        Check if calling next_tool_name would create a suspicious sequence.
+        Check if next tool call would create a suspicious sequence.
+        
+        Args:
+            next_tool_name: Name of the tool about to be called
         
         Returns:
-            (is_suspicious, reason): A tuple where is_suspicious is True if
-            the sequence looks anomalous, and reason explains why.
+            (is_suspicious, reason): Whether sequence is anomalous and why
         """
         if len(self.call_history) < 2:
             return False, None
@@ -60,17 +58,12 @@ class DependencyTracker:
             if now - record.timestamp < self.burst_window
         ]
         
-        # Check for rapid burst of calls after a read operation
         if len(recent_calls) >= 2:
             last_call = self.call_history[-1]
             
-            # If last call was a read operation, and now we have multiple
-            # subsequent calls in quick succession, that's suspicious
             if last_call.is_read_operation and len(recent_calls) >= 3:
                 return True, f"Rapid burst of {len(recent_calls)} tool calls after read operation"
         
-        # Check for unusual escalation: read → write → write pattern
-        # Only consider recent calls within the burst window
         if len(recent_calls) >= 2:
             last_two = recent_calls[-2:]
             if (last_two[0].is_read_operation and 
@@ -81,12 +74,11 @@ class DependencyTracker:
         return False, None
     
     def _is_read_operation(self, tool_name: str) -> bool:
-        """Check if a tool name indicates a read/retrieval operation."""
+        """Check if tool name indicates a read/retrieval operation."""
         tool_lower = tool_name.lower()
         return any(keyword in tool_lower for keyword in self._READ_TOOL_KEYWORDS)
 
 
-# Global tracker instance (one per middleware instance)
 _tracker = DependencyTracker()
 
 

@@ -1,4 +1,5 @@
-# server.py
+"""Ronin Defense Proxy Server for MCP tool call protection."""
+
 from fastmcp import FastMCP
 from middleware import DefenseMiddleware
 
