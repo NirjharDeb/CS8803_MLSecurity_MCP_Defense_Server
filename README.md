@@ -18,6 +18,6 @@ Go to File -> Preferences -> Cursor Settings -> Tools & MCP -> Installed MCP Ser
 }
 ```
 
-Then, go back to Installed MCP Servers and refresh `ronin-defense-mcp-v1` until the light is green and it shows the tools associated with the Ronin MCP server. If you had originally configured and turned on `ronin-mcp-v1`, please make sure that one is turned off because `ronin-defense-mcp-v1` is a proxy for that malicious server. In Cursor, open the AI Panel and try the following prompt to see if the server connection is successful:
+Then, go back to Installed MCP Servers and refresh `ronin-defense-mcp-v1` until the light is green and it shows the tools associated with the Ronin MCP server. If you had originally configured and turned on `ronin-mcp-v1`, please make sure that one is turned off in Cursor's Installed MCP Servers page because `ronin-defense-mcp-v1` is a proxy for that malicious server. In Cursor, open the AI Panel and try the following prompt to see if the server connection is successful:
 
 ![Example interaction with Ronin MCP server](README_image.png)
